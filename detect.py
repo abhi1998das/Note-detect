@@ -21,9 +21,11 @@ def parabolic(f, x):
     yv = f[x] - 1/4. * (f[x-1] - f[x+1]) * (xv - x)
     return (xv, yv)
 
+
 def find(condition):
     res, = np.nonzero(np.ravel(condition))
     return res
+
 
 def build_default_tuner_range():
 
@@ -90,6 +92,7 @@ def build_default_tuner_range():
             2093.0: 'C7'
             }
 
+
 def loudness(chunk):
     data = numpy.array(chunk, dtype=float) / 32768.0
     ms = math.sqrt(numpy.sum(data ** 2.0) / len(data))
@@ -97,21 +100,22 @@ def loudness(chunk):
         ms = 10e-8
     return 10.0 * math.log(ms, 10.0)
 
+
 def freq_from_autocorr(raw_data_signal, fs):
     corr = fftconvolve(raw_data_signal, raw_data_signal[::-1], mode='full')
-    
+
     corr = corr[int(len(corr)/2):]
     d = diff(corr)
-    if len(find(d>0))==0:
+    if len(find(d > 0)) == 0:
         return 0
-    
+
     start = find(d > 0)[0]
-        
+
     peak = argmax(corr[start:]) + start
     px, py = parabolic(corr, peak)
-    #print(px)
+    # print(px)
     return fs / px
-  
+
 
 def freq_from_fft(signal, fs):
     """
@@ -139,9 +143,12 @@ def freq_from_fft(signal, fs):
     # Convert to equivalent frequency
     return fs * i_interp / N  # Hz
 
+
 def find_nearest(array, value):
     index = (numpy.abs(array - value)).argmin()
     return array[index]
+
+
 def closest_value_index(array, guessValue):
     # Find closest element in the array, value wise
     closestValue = find_nearest(array, guessValue)
@@ -150,41 +157,42 @@ def closest_value_index(array, guessValue):
     # Numpys 'where' returns a 2D array with the element index as the value
     return indexArray[0][0]
 
-sound = AudioSegment.from_file("wavfiles/samp.mp3")
+
+sound = AudioSegment.from_file("wavfiles/c6.wav")
 
 tunerNotes = build_default_tuner_range()
-#print(tunerNotes)
+# print(tunerNotes)
 #samples = sound.get_array_of_samples()
 frequencies = numpy.array(sorted(tunerNotes.keys()))
-#print(frequencies)
+# print(frequencies)
 soundgate = 19
 slices = sound[::500]
 
 
-
 for sl in slices:
-    raw_data_signal=sl.get_array_of_samples()
+    raw_data_signal = sl.get_array_of_samples()
     signal_level = round(abs(loudness(raw_data_signal)), 2)
-    inputnote=0
+    inputnote = 0
 
     try:
         # find the freq from the audio sample
         inputnote = round(freq_from_autocorr(
-        raw_data_signal, 48000), 2)
+            raw_data_signal, 48000), 2)
 
     except:
         print('error')
         inputnote = 0
    # print(inputnote)
-    inputnote-=24000
+   # if you want to use some other sount uncomment  line 187
+  #  inputnote-=24000
     if inputnote > frequencies[len(tunerNotes)-1]:
         continue
 
     # not interested in notes below the notes list
     if inputnote < frequencies[0]:
-        continue    
+        continue
     if signal_level > soundgate:
         continue
-    
+
     targetnote = closest_value_index(frequencies, round(inputnote, 2))
     print(tunerNotes[frequencies[targetnote]])
